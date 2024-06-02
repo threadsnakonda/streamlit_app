@@ -11,7 +11,7 @@ class Meeting_Minutes:
     def __init__(self):
 
         self.today = datetime.datetime.today()
-        self.password = ''
+        self.password = 'G3002bsjc!'
 
         if 'password_correct' not in st.session_state:
             st.session_state.password_correct = False
@@ -33,7 +33,7 @@ class Meeting_Minutes:
 
         if not st.session_state.password_correct:
             with st.form(key = 'form'):
-                password = st.text_input(label = 'Pass Word')
+                password = st.text_input(label = 'Pass Word', type = 'password')
                 submit = st.form_submit_button(label = 'Submit')
 
             if submit:

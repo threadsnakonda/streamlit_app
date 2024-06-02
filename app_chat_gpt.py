@@ -6,12 +6,12 @@ class App_chat_gpt:
 
     def __init__(self):
 
-        self.password = ''
+        self.password = 'G3002bsjc!'
         if 'password_correct' not in st.session_state:
             st.session_state.password_correct = False
-
         if not 'api_key' in st.session_state:
             st.session_state.api_key = False
+
         self.init_chat = {
             'role': 'system',
             'content': '한국말로 간결하게 대답해줘. 코드를 생성하는 영역에는 영어로 써줘',
@@ -37,7 +37,7 @@ class App_chat_gpt:
 
         if not st.session_state.password_correct:
             with st.form(key = 'form'):
-                password = st.text_input(label = 'Pass Word')
+                password = st.text_input(label = 'Pass Word', type = 'password')
                 submit = st.form_submit_button(label = 'Submit')
 
             if submit:
@@ -53,7 +53,7 @@ class App_chat_gpt:
         if st.session_state.password_correct:
 
             if not st.session_state.api_key:
-                st.session_state.api_key = st.text_input(label = 'OpenAI API KEY')
+                st.session_state.api_key = st.text_input(label = 'OpenAI API KEY', type = 'password')
 
             st.subheader('무엇이든 물어보살')
 
@@ -88,11 +88,16 @@ class App_chat_gpt:
 
         self.add_chat_history('user', question)
 
-        response = client.chat.completions.create(
-            model = 'gpt-4o',
-            messages = st.session_state.chat_history,
-            stream = True,
-        )
+        try:
+            response = client.chat.completions.create(
+                model = 'gpt-4o',
+                messages = st.session_state.chat_history,
+                stream = True,
+            )
+        except:
+            st.session_state.chat_history = []
+            st.warning('Invalid API key', icon="⚠️")
+            return
 
         answer = ''
         for chunk in response:
