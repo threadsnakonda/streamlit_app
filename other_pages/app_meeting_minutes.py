@@ -75,23 +75,23 @@ class Meeting_Minutes:
             if selected_idxs:
                 st.caption(selected_idxs)
 
-            save_col, empty_col1, empty_col2, download_col = st.columns(4)
-            with save_col:
-                save_digits = st.button('Save as binary digits')
-                if save_digits:
-                    with open (f'data/contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl', 'wb') as f:
-                        pickle.dump(st.session_state.contents, f)
+            # save_col, download_col = st.columns(2)
+            # with save_col:
+            save_digits = st.button('Save as binary digits')
+            if save_digits:
+                with open (f'data/contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl', 'wb') as f:
+                    pickle.dump(st.session_state.contents, f)
 
-            with download_col:
-                pickle_contents = pickle.dumps(st.session_state.contents)
-                st.download_button(
-                    label = 'Download as binary digits',
-                    data = pickle_contents,
-                    file_name = f'contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl',
-                    mime = 'application/octet-stream',
-                )
+            # with download_col:
+            pickle_contents = pickle.dumps(st.session_state.contents)
+            st.download_button(
+                label = 'Download as binary digits',
+                data = pickle_contents,
+                file_name = f'contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl',
+                mime = 'application/octet-stream',
+            )
 
-            with st.container(height = 500):
+            with st.container(height = 700):
                 self.display_data(selected_idxs)
 
 
