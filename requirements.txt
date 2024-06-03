@@ -1,4 +1,4 @@
 openai
 st_pages
 pympler
-cv2
+opencv-python
