@@ -1,4 +1,4 @@
 openai
 st_pages
 pympler
-opencv-python
+opencv-python-headless
