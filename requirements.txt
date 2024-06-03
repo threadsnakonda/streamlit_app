@@ -2,3 +2,4 @@ openai
 st_pages
 pympler
 opencv-python-headless
+pyautogui
