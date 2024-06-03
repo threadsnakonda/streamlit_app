@@ -1,3 +1,4 @@
 openai
 st_pages
 pympler
+cv2
