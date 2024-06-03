@@ -6,6 +6,12 @@ import pickle
 import os
 from pympler import asizeof
 
+import cv2
+import numpy as np
+import pyautogui
+from io import BytesIO
+
+
 class Meeting_Minutes:
 
     def __init__(self):
@@ -15,6 +21,9 @@ class Meeting_Minutes:
 
         if 'password_correct' not in st.session_state:
             st.session_state.password_correct = False
+
+        if 'byte_images' not in st.session_state:
+            st.session_state.byte_images = []
 
         if not 'load_contents' in st.session_state:
             st.session_state.load_contents = True
@@ -60,71 +69,109 @@ class Meeting_Minutes:
             if not 'contents' in st.session_state:
                 st.session_state.contents = []
 
-            with st.form(key = 'form'):
-                date, title, byte_images, description = self.set_form()
-                submit = st.form_submit_button(label = ':orange[submit]')
+            date, title, description = self.set_form(self.today, None, None)
+
+            submit = st.button(label = ':orange[submit]')
                 
             if submit:
                 if title != '' and description != '':
-                    self.add_contents(date, title, byte_images, description)
+                    self.add_contents(date, title, description)
+                    st.session_state.byte_images = []
+                    st.rerun()
+
+            st.divider()
 
             selected_idxs = list(range(0, len(st.session_state.contents)))
             key_word = st.text_input('***:green[Search Key-word]***')
             if key_word:
                 selected_idxs = self.find_idx(key_word)
-            if selected_idxs:
-                st.caption(selected_idxs)
 
-            # save_col, download_col = st.columns(2)
-            # with save_col:
-            save_digits = st.button('Save as binary digits')
-            if save_digits:
-                with open (f'data/contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl', 'wb') as f:
-                    pickle.dump(st.session_state.contents, f)
+            upload_contents = st.file_uploader('***:blue[upload contents]***', type = ['pkl'], accept_multiple_files = True)
+                
+            if upload_contents:
+                for upload_content in upload_contents:
+                    upload_content = pickle.load(upload_content)
+                    for content in upload_content:
+                        if not content in st.session_state.contents:
+                            st.session_state.contents.append(content)
 
-            # with download_col:
-            pickle_contents = pickle.dumps(st.session_state.contents)
-            st.download_button(
-                label = 'Download as binary digits',
-                data = pickle_contents,
-                file_name = f'contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl',
-                mime = 'application/octet-stream',
-            )
+
+            save_digits_col, pickle_contents_col, _ = st.columns([1, 1, 4])
+
+            with save_digits_col:
+                save_digits = st.button('***:orange[Save as binary digits]***')
+                if save_digits:
+                    try:
+                        save_name = f'data/contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl'
+                        with open (save_name, 'wb') as f:
+                            pickle.dump(st.session_state.contents, f)
+                        st.toast(f'{save_name} save complete!')
+                    except: pass
+
+            with pickle_contents_col:
+                pickle_contents = pickle.dumps(st.session_state.contents)
+                st.download_button(
+                    label = '***:violet[Download as binary digits]***',
+                    data = pickle_contents,
+                    file_name = f'contents_{self.today.strftime("%Y_%m_%d_%H_%M_%S")}.pkl',
+                    mime = 'application/octet-stream',
+                )
 
             with st.container(height = 700):
                 self.display_data(selected_idxs)
 
 
-    def set_form(self):
-        
-        title_col, image_col = st.columns(2)
-        with title_col:
-            date = st.date_input('***Date***', self.today)
-            title = st.text_input('***Title***', '')
+    def capture_screen(self):
+        screenshot = pyautogui.screenshot()
+        img = np.array(screenshot)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        return img
 
-        with image_col:
-            images = st.file_uploader('***Image***',
-                                      accept_multiple_files = True,
-                                      type = [
-                                          'bmp', 'gif', 'ico', 'jpeg',
-                                          'jpg', 'png', 'tif', 'tiff',
-                                          'webp',])
-            
-        byte_images = []
-        if images:
-            for image in images:
-                byte_images.append(image.read())
+    def select_roi(self, img):
+        cv2.namedWindow("Select Region", cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty("Select Region", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.setWindowProperty("Select Region", cv2.WND_PROP_TOPMOST, 1)
+        r = cv2.selectROI("Select Region", img, False, False)
+        cv2.destroyAllWindows()
+        return r
 
-        description = st.text_area('***Description***', '')
+    def set_form(self, init_date, init_title, init_description):
 
-        return date, title, byte_images, description
+        screen_shot = st.button('***:green[Add Screen-shot]***')
+        if screen_shot:
+            img = self.capture_screen()
+            x, y, w, h = self.select_roi(img)
+            if w > 0 and h > 0:
+                screenshot = pyautogui.screenshot(region=(x, y, w, h))
+
+                img_buffer = BytesIO()
+                screenshot.save(img_buffer, format='PNG')
+                byte_data = img_buffer.getvalue()
+                st.session_state.byte_images.append(byte_data)
+
+        if st.session_state.byte_images:
+            cols = st.columns(len(st.session_state.byte_images))
+            for i, (col, byte_image) in enumerate(zip(cols, st.session_state.byte_images)):
+                with col:
+                    image = Image.open(io.BytesIO(byte_image))
+                    max_size = (200, 200)
+                    image.thumbnail(max_size)
+                    st.image(image)
+                    if st.button('Delete', key=f'delete_{i}'):
+                        del st.session_state.byte_images[i]
+                        st.rerun()
+
+        date = st.date_input('***Date***', init_date)
+        title = st.text_input('***Title***', init_title)
+        description = st.text_area('***Description***', init_description)
+
+        return date, title, description
 
 
-
-    def add_contents(self, date, title, byte_images, description):
-        content = {'date' : date, 'title' : title, 'images' : byte_images, 'description' : description}
+    def add_contents(self, date, title, description):
+        content = {'date' : date, 'title' : title, 'images' : st.session_state.byte_images, 'description' : description}
         st.session_state.contents.append(content)
-        st.session_state.contents.sort(key=lambda x: x['date'])
+        st.session_state.contents.sort(key=lambda x: x['date'], reverse=True)
 
     def find_idx(self, key_word):
         selected_idxs = []
@@ -142,8 +189,8 @@ class Meeting_Minutes:
                         cols = st.columns(len(content['images']))
                         for col, byte_image in zip(cols, content['images']):
                             image = Image.open(io.BytesIO(byte_image))
-                            max_size = (200, 200)
-                            image.thumbnail(max_size)
+                            # max_size = (200, 200)
+                            # image.thumbnail(max_size)
                             col.image(image)
 
                     st.write(content['description'])
