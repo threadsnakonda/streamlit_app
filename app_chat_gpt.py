@@ -27,7 +27,7 @@ class App_chat_gpt:
         show_pages(
             [
                 Page('app_chat_gpt.py', '1. Chat_GPT'),
-                Page('other_pages/app_meeting_minutes.py', '2. Meeting Minutes'),
+                # Page('other_pages/app_meeting_minutes.py', '2. Meeting Minutes'),
             ]
         )
 
